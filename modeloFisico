@@ -1,0 +1,127 @@
+SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
+CREATE SCHEMA IF NOT EXISTS `mydb` DEFAULT CHARACTER SET utf8 ;
+USE `mydb` ;
+
+show tables;
+
+DROP TABLE IF EXISTS `mydb`.`tbl_alunos`;
+CREATE TABLE `mydb`.`tbl_alunos` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `nome` VARCHAR(100) NOT NULL,
+  `data_nascimento` DATE NOT NULL,
+  `cpf` VARCHAR(20) NOT NULL,
+  `telefone` VARCHAR(20) NOT NULL,
+  `email` VARCHAR(100) NOT NULL,
+  `endereco` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS `mydb`.`tbl_cursos`;
+CREATE TABLE `mydb`.`tbl_cursos` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `nome` VARCHAR(100) NOT NULL,
+  `descricao` TEXT NULL,
+  `carga_horaria` INT NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS `mydb`.`tbl_turmas`;
+CREATE TABLE `mydb`.`tbl_turmas` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `semestre` ENUM('1', '2') NOT NULL,
+  `ano` INT NOT NULL,
+  `descricao` VARCHAR(100) NULL,
+  `tbl_cursos_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_tbl_turmas_tbl_cursos1_idx` (`tbl_cursos_id` ASC),
+  CONSTRAINT `fk_tbl_turmas_tbl_cursos1`
+    FOREIGN KEY (`tbl_cursos_id`)
+    REFERENCES `mydb`.`tbl_cursos`(`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS `mydb`.`tbl_matricula`;
+CREATE TABLE `mydb`.`tbl_matricula` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `Num_matricula` VARCHAR(45) NOT NULL,
+  `data_matricula` DATE NOT NULL,
+  `tbl_alunos_id` INT NOT NULL,
+  `tbl_turmas_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_tbl_matricula_tbl_alunos1_idx` (`tbl_alunos_id` ASC),
+  INDEX `fk_tbl_matricula_tbl_turmas1_idx` (`tbl_turmas_id` ASC),
+  CONSTRAINT `fk_tbl_matricula_tbl_alunos1`
+    FOREIGN KEY (`tbl_alunos_id`)
+    REFERENCES `mydb`.`tbl_alunos`(`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_tbl_matricula_tbl_turmas1`
+    FOREIGN KEY (`tbl_turmas_id`)
+    REFERENCES `mydb`.`tbl_turmas`(`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS `mydb`.`tbl_professor`;
+CREATE TABLE `mydb`.`tbl_professor` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `nome` VARCHAR(100) NOT NULL,
+  `cpf` VARCHAR(100) NOT NULL,
+  `formacao` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS `mydb`.`tbl_disciplina`;
+CREATE TABLE `mydb`.`tbl_disciplina` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `nome` VARCHAR(100) NOT NULL,
+  `carga_horaria` INT NULL,
+  `tbl_cursos_id` INT NOT NULL,
+  `tbl_professor_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_tbl_disciplina_tbl_cursos1_idx` (`tbl_cursos_id` ASC),
+  INDEX `fk_tbl_disciplina_tbl_professor1_idx` (`tbl_professor_id` ASC),
+  CONSTRAINT `fk_tbl_disciplina_tbl_cursos1`
+    FOREIGN KEY (`tbl_cursos_id`)
+    REFERENCES `mydb`.`tbl_cursos`(`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_tbl_disciplina_tbl_professor1`
+    FOREIGN KEY (`tbl_professor_id`)
+    REFERENCES `mydb`.`tbl_professor`(`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+DROP TABLE IF EXISTS `mydb`.`tbl_notas`;
+CREATE TABLE `mydb`.`tbl_notas` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `nota_1` DECIMAL(5,2) NOT NULL,
+  `nota_2` DECIMAL(5,2) NOT NULL,
+  `nota_final` DECIMAL(5,2) NOT NULL,
+  `aprovado` TINYINT NOT NULL,
+  `tbl_matricula_id` INT NOT NULL,
+  `tbl_disciplina_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_tbl_notas_tbl_matricula1_idx` (`tbl_matricula_id` ASC),
+  INDEX `fk_tbl_notas_tbl_disciplina1_idx` (`tbl_disciplina_id` ASC),
+  CONSTRAINT `fk_tbl_notas_tbl_matricula1`
+    FOREIGN KEY (`tbl_matricula_id`)
+    REFERENCES `mydb`.`tbl_matricula`(`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_tbl_notas_tbl_disciplina1`
+    FOREIGN KEY (`tbl_disciplina_id`)
+    REFERENCES `mydb`.`tbl_disciplina`(`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
