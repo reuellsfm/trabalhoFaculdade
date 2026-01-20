@@ -156,17 +156,95 @@ Plugin completo e revolucionario de Jailbreak para Counter-Strike 2, desenvolvid
 
 ### Requisitos
 - Counter-Strike 2 Dedicated Server
-- [Metamod:Source](https://www.sourcemm.net/)
+- [Metamod:Source 2.x](https://www.sourcemm.net/downloads.php/?branch=master)
 - [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) v1.0.300+
 - MySQL/MariaDB (opcional, para persistencia)
+- libicu / icu-libs (Linux)
 
-### Passos
-1. Instale o Metamod:Source
-2. Instale o CounterStrikeSharp
-3. Baixe a release mais recente do Super Jailbreak
-4. Extraia para `csgo/addons/counterstrikesharp/plugins/`
-5. Configure o arquivo de configuracao em `configs/plugins/CS2-SuperJailbreak/`
-6. Reinicie o servidor
+### Estrutura de Pastas Correta
+```
+cs2server/
+└── game/
+    └── csgo/
+        ├── gameinfo.gi          <-- EDITAR ESTE ARQUIVO!
+        └── addons/
+            ├── metamod/         <-- Metamod:Source
+            │   └── metaplugins.ini
+            └── counterstrikesharp/
+                ├── api/
+                ├── configs/
+                └── plugins/
+                    └── SuperJailbreak/    <-- NOSSO PLUGIN
+                        ├── SuperJailbreak.dll
+                        ├── config.json
+                        └── lang/
+```
+
+### Passo 1: Instalar Metamod:Source
+[Documentação oficial](https://wiki.alliedmods.net/Installing_metamod:source)
+
+1. Baixe o Metamod 2.x para CS2: https://www.sourcemm.net/downloads.php/?branch=master
+2. Extraia a pasta `addons` para `game/csgo/`
+3. **IMPORTANTE:** Edite o arquivo `game/csgo/gameinfo.gi`
+4. Adicione esta linha **LOGO APÓS** `Game_LowViolence csgo_lv`:
+```
+			Game	csgo/addons/metamod
+```
+
+**Exemplo do gameinfo.gi:**
+```
+SearchPaths
+{
+    Game_LowViolence	csgo_lv
+    Game	csgo/addons/metamod    <-- ADICIONAR ESTA LINHA
+    Game	csgo
+    ...
+}
+```
+
+> ⚠️ **AVISO:** O CS2 sobrescreve este arquivo em cada update! Use o script `scripts/fix-gameinfo.sh`
+
+### Passo 2: Instalar CounterStrikeSharp
+[Documentação oficial](https://github.com/roflmuffin/CounterStrikeSharp/blob/main/INSTALL.md)
+
+1. Baixe a versão `with-runtime`: https://github.com/roflmuffin/CounterStrikeSharp/releases
+2. Extraia para `game/csgo/` (vai fazer merge com a pasta addons existente)
+3. No Linux, instale a dependência: `apt install libicu-dev`
+4. Ou configure: `export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true`
+
+### Passo 3: Instalar Super Jailbreak
+
+1. Baixe a release mais recente
+2. Extraia para `game/csgo/addons/counterstrikesharp/plugins/SuperJailbreak/`
+3. Configure `config.json` com suas preferências
+4. Reinicie o servidor
+
+### Passo 4: Verificar Instalação
+
+No console do servidor, digite:
+```
+meta list
+```
+Deve mostrar: `CounterStrikeSharp`
+
+```
+css_plugins list
+```
+Deve mostrar: `SuperJailbreak`
+
+### Script de Instalação Automática (Linux)
+
+```bash
+# Baixar e executar o instalador
+curl -sSL https://raw.githubusercontent.com/seu-repo/CS2-SuperJailbreak/main/scripts/install-server.sh | sudo bash
+```
+
+Ou manualmente:
+```bash
+cd CS2-SuperJailbreak/scripts
+chmod +x install-server.sh
+sudo ./install-server.sh
+```
 
 ### Configuracao do Banco de Dados (Opcional)
 ```sql
