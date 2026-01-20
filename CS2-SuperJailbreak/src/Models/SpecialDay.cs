@@ -16,7 +16,7 @@ public enum SpecialDayType
     KnifeFight,
     NoScope,
     GravityFreeday,
-    Hunger Games,
+    HungerGames,
     TankDay,
     JuggernautDay,
     InfectedDay,

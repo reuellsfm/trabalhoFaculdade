@@ -124,7 +124,7 @@ public class AchievementsModule
                 AchievementRarity.Uncommon => ChatColors.Green,
                 AchievementRarity.Rare => ChatColors.Blue,
                 AchievementRarity.Epic => ChatColors.Purple,
-                AchievementRarity.Legendary => ChatColors.Gold,
+                AchievementRarity.Legendary => ChatColors.LightYellow,
                 _ => ChatColors.White
             };
 
@@ -237,13 +237,13 @@ public class AchievementsModule
                 AchievementRarity.Uncommon => ChatColors.Green,
                 AchievementRarity.Rare => ChatColors.Blue,
                 AchievementRarity.Epic => ChatColors.Purple,
-                AchievementRarity.Legendary => ChatColors.Gold,
+                AchievementRarity.Legendary => ChatColors.LightYellow,
                 _ => ChatColors.White
             };
 
             var displayName = unlocked
                 ? $"{rarityColor}{achievement.IconEmoji} {achievement.Name} {progressStr}"
-                : $"{ChatColors.Grey}{achievement.Name} {progressStr}";
+                : $"{ChatColors.Silver}{achievement.Name} {progressStr}";
 
             menu.AddMenuOption(displayName, (p, o) => ShowAchievementDetails(p, achievement));
         }
@@ -302,7 +302,7 @@ public class AchievementsModule
             AchievementRarity.Uncommon => $"{ChatColors.Green}Incomum",
             AchievementRarity.Rare => $"{ChatColors.Blue}Raro",
             AchievementRarity.Epic => $"{ChatColors.Purple}Epico",
-            AchievementRarity.Legendary => $"{ChatColors.Gold}Lendario",
+            AchievementRarity.Legendary => $"{ChatColors.LightYellow}Lendario",
             _ => rarity.ToString()
         };
     }
