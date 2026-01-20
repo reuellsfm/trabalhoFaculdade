@@ -1,0 +1,86 @@
+{
+  "ConfigVersion": 1,
+
+  "DatabaseHost": "localhost",
+  "DatabasePort": 3306,
+  "DatabaseName": "superjailbreak",
+  "DatabaseUser": "root",
+  "DatabasePassword": "",
+  "EnableDatabase": true,
+
+  "WardenEnabled": true,
+  "WardenLaserEnabled": true,
+  "WardenLaserColor": "0,0,255",
+  "WardenPaintEnabled": true,
+  "WardenAutoAssign": false,
+  "WardenCooldownSeconds": 60,
+  "WardenMaxTimeMinutes": 5,
+  "WardenIconEnabled": true,
+  "WardenGlowEnabled": true,
+
+  "LREnabled": true,
+  "LRMinCTsAlive": 1,
+  "LRMaxTsForLR": 2,
+  "LRTimeoutSeconds": 60,
+  "LRRebelOnWeaponPickup": true,
+  "LRAllowedTypes": [
+    "Knife", "NoScope", "Shot4Shot", "Mag4Mag", "Dodgeball",
+    "GunToss", "Grenade", "RussianRoulette", "HeadshotOnly",
+    "ScoutKnife", "Shotgun", "Deagle", "Race", "HotPotato"
+  ],
+
+  "SpecialDaysEnabled": true,
+  "MaxSpecialDaysPerMap": 3,
+  "SpecialDayCooldownRounds": 3,
+  "AllowedSpecialDays": [
+    "Freeday", "Warday", "HideAndSeek", "Zombie", "GunGame",
+    "Dodgeball", "HeadshotOnly", "KnifeFight", "NoScope",
+    "GravityFreeday", "BattleRoyale", "OneInTheChamber",
+    "GoldenKnife", "SimonSays", "HotPotato", "FreezeTag"
+  ],
+
+  "EconomyEnabled": true,
+  "StartingCredits": 100,
+  "CreditsPerRound": 10,
+  "CreditsPerKill": 25,
+  "CreditsPerLRWin": 100,
+  "CreditsPerWardenRound": 50,
+  "CreditsPerRebellionKill": 50,
+
+  "GangsEnabled": true,
+  "GangCreationCost": 5000,
+  "GangMaxMembers": 10,
+  "GangTagMaxLength": 6,
+
+  "AchievementsEnabled": true,
+  "AchievementAnnouncements": true,
+
+  "MuteDeadEnabled": true,
+  "MuteTsOnRoundStart": true,
+  "MuteTsDurationSeconds": 30,
+
+  "TeamBalanceEnabled": true,
+  "CTRatio": 0.33,
+  "MinCTsRequired": 1,
+
+  "RebelEnabled": true,
+  "RebelOnDamageToGuard": true,
+  "RebelOnWeaponPickup": true,
+  "RebelOnEnterRestrictedArea": true,
+  "RebelGlowEnabled": true,
+  "RebelGlowColor": "255,0,0",
+
+  "OpenCellsOnRoundStart": false,
+  "OpenCellsDelaySeconds": 60,
+  "WardenCanOpenCells": true,
+
+  "SoundsEnabled": true,
+  "WardenAssignedSound": "sounds/superjailbreak/warden_assigned.wav",
+  "WardenDiedSound": "sounds/superjailbreak/warden_died.wav",
+  "LRStartSound": "sounds/superjailbreak/lr_start.wav",
+
+  "PluginPrefix": "[SuperJailbreak]",
+  "PluginPrefixColor": "Purple",
+  "Language": "pt-BR",
+  "DebugMode": false
+}
