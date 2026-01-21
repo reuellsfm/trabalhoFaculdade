@@ -208,7 +208,7 @@ public class PluginConfig : BasePluginConfig
 
     // ==================== MISC ====================
     [JsonPropertyName("PluginPrefix")]
-    public string PluginPrefix { get; set; } = "[SuperJailbreak]";
+    public string PluginPrefix { get; set; } = "[DETENTOS CLAN]";
 
     [JsonPropertyName("PluginPrefixColor")]
     public string PluginPrefixColor { get; set; } = "Purple";

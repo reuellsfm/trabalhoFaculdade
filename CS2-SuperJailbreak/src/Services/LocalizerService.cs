@@ -51,7 +51,7 @@ public class LocalizerService
         _translations = new Dictionary<string, string>
         {
             // General
-            ["prefix"] = "[SuperJailbreak]",
+            ["prefix"] = "[DETENTOS CLAN]",
             ["error_not_alive"] = "Voce precisa estar vivo!",
             ["error_not_ct"] = "Apenas CTs podem usar este comando!",
             ["error_not_t"] = "Apenas Terroristas podem usar este comando!",
