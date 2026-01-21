@@ -22,6 +22,12 @@ public class EconomyModule
     private Dictionary<ulong, Dictionary<string, int>> _purchasesThisRound = new();
     private Dictionary<ulong, Dictionary<string, int>> _purchasesThisMap = new();
 
+    // Efeitos ativos
+    private HashSet<ulong> _playersWithNoFallDamage = new();
+    private HashSet<ulong> _playersWithDoubleJump = new();
+    private Dictionary<ulong, int> _playersJumpCount = new();
+    private Dictionary<ulong, string> _playersWithTrail = new();
+
     public EconomyModule(SuperJailbreakPlugin plugin)
     {
         _plugin = plugin;
@@ -53,10 +59,15 @@ public class EconomyModule
         var jailPlayer = _plugin.GetJailPlayer(player);
         if (jailPlayer == null) return;
 
-        jailPlayer.Credits += amount;
-        jailPlayer.TotalCreditsEarned += amount;
+        // Aplicar multiplicador da gang
+        float multiplier = _plugin.Gangs?.GetCreditMultiplier(player) ?? 1.0f;
+        int finalAmount = (int)(amount * multiplier);
+        string bonusText = multiplier > 1.0f ? $" ({ChatColors.Yellow}+{(int)((multiplier - 1) * 100)}% bonus gang{ChatColors.White})" : "";
 
-        _plugin.PrintToChat(player, $"{ChatColors.Green}+{amount} creditos{ChatColors.White} ({reason}) | Total: {jailPlayer.Credits}");
+        jailPlayer.Credits += finalAmount;
+        jailPlayer.TotalCreditsEarned += finalAmount;
+
+        _plugin.PrintToChat(player, $"{ChatColors.Green}+{finalAmount} creditos{ChatColors.White} ({reason}){bonusText} | Total: {jailPlayer.Credits}");
 
         // Achievement
         _plugin.Achievements?.CheckAchievement(player, AchievementType.EarnCredits, jailPlayer.TotalCreditsEarned);
@@ -310,18 +321,19 @@ public class EconomyModule
                 break;
 
             case EffectType.Trail:
-                // TODO: Implementar trails
-                _plugin.PrintToChat(player, $"{ChatColors.Yellow}Trail ativado!");
+                _playersWithTrail[player.SteamID] = effect.CustomEffect ?? "fire";
+                _plugin.PrintToChat(player, $"{ChatColors.Yellow}Trail de {effect.CustomEffect ?? "fogo"} ativado!");
                 break;
 
             case EffectType.NoFallDamage:
-                // TODO: Implementar no fall damage
+                _playersWithNoFallDamage.Add(player.SteamID);
                 _plugin.PrintToChat(player, $"{ChatColors.Green}Sem dano de queda nesta rodada!");
                 break;
 
             case EffectType.DoubleJump:
-                // TODO: Implementar double jump
-                _plugin.PrintToChat(player, $"{ChatColors.Green}Pulo duplo ativado!");
+                _playersWithDoubleJump.Add(player.SteamID);
+                _playersJumpCount[player.SteamID] = 0;
+                _plugin.PrintToChat(player, $"{ChatColors.Green}Pulo duplo ativado! Pule novamente no ar!");
                 break;
         }
     }
@@ -496,6 +508,140 @@ public class EconomyModule
             ShopCategory.Special => "Especiais",
             _ => category.ToString()
         };
+    }
+
+    #endregion
+
+    #region Effect Checks
+
+    /// <summary>
+    /// Verifica se jogador tem no fall damage ativo
+    /// </summary>
+    public bool HasNoFallDamage(CCSPlayerController player)
+    {
+        return _playersWithNoFallDamage.Contains(player.SteamID);
+    }
+
+    /// <summary>
+    /// Processa dano de queda - retorna true se deve bloquear
+    /// </summary>
+    public bool ProcessFallDamage(CCSPlayerController player, ref float damage)
+    {
+        if (_playersWithNoFallDamage.Contains(player.SteamID))
+        {
+            damage = 0;
+            return true; // Bloquear dano
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Verifica se jogador tem double jump ativo
+    /// </summary>
+    public bool HasDoubleJump(CCSPlayerController player)
+    {
+        return _playersWithDoubleJump.Contains(player.SteamID);
+    }
+
+    /// <summary>
+    /// Processa pulo - retorna true se deve fazer double jump
+    /// </summary>
+    public bool ProcessJump(CCSPlayerController player)
+    {
+        if (!_playersWithDoubleJump.Contains(player.SteamID))
+            return false;
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null) return false;
+
+        // Se esta no ar e ainda nao usou double jump
+        var flags = pawn.Flags;
+        bool onGround = (flags & (uint)PlayerFlags.FL_ONGROUND) != 0;
+
+        if (!_playersJumpCount.ContainsKey(player.SteamID))
+            _playersJumpCount[player.SteamID] = 0;
+
+        if (onGround)
+        {
+            _playersJumpCount[player.SteamID] = 0;
+            return false;
+        }
+
+        if (_playersJumpCount[player.SteamID] < 1)
+        {
+            _playersJumpCount[player.SteamID]++;
+            // Aplicar impulso para cima
+            var velocity = pawn.AbsVelocity;
+            velocity.Z = 300f; // Impulso do double jump
+            pawn.Teleport(null, null, velocity);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Verifica se jogador tem trail ativo
+    /// </summary>
+    public bool HasTrail(CCSPlayerController player, out string trailType)
+    {
+        return _playersWithTrail.TryGetValue(player.SteamID, out trailType!);
+    }
+
+    /// <summary>
+    /// Desenha trail para jogador (chamar a cada tick)
+    /// </summary>
+    public void DrawTrail(CCSPlayerController player)
+    {
+        if (!_playersWithTrail.TryGetValue(player.SteamID, out var trailType))
+            return;
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn?.AbsOrigin == null) return;
+
+        // Criar particula de trail
+        var particle = Utilities.CreateEntityByName<CParticleSystem>("info_particle_system");
+        if (particle == null) return;
+
+        string effectName = trailType switch
+        {
+            "fire" => "particles/burning_fx/burning_character.vpcf",
+            "ice" => "particles/water_impact/water_splash.vpcf",
+            _ => "particles/burning_fx/burning_character.vpcf"
+        };
+
+        particle.EffectName = effectName;
+        particle.Teleport(pawn.AbsOrigin, new QAngle(0, 0, 0), new Vector(0, 0, 0));
+        particle.DispatchSpawn();
+        particle.AcceptInput("Start");
+
+        // Remover particula apos 0.5 segundos
+        _plugin.AddTimer(0.5f, () =>
+        {
+            if (particle.IsValid)
+                particle.Remove();
+        });
+    }
+
+    /// <summary>
+    /// Limpa efeitos no inicio da rodada
+    /// </summary>
+    public void OnRoundStart()
+    {
+        _purchasesThisRound.Clear();
+        _playersWithNoFallDamage.Clear();
+        _playersWithDoubleJump.Clear();
+        _playersJumpCount.Clear();
+        _playersWithTrail.Clear();
+    }
+
+    /// <summary>
+    /// Limpa efeitos no inicio do mapa
+    /// </summary>
+    public void OnMapStart()
+    {
+        _purchasesThisMap.Clear();
+        OnRoundStart();
     }
 
     #endregion

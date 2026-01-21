@@ -747,6 +747,31 @@ public partial class SuperJailbreakPlugin : BasePlugin, IPluginConfig<PluginConf
         Logger.LogInformation("[SuperJailbreak] Celas abertas");
     }
 
+    public void CloseCells()
+    {
+        // Encontrar e fechar entidades de porta de cela
+        var doors = Utilities.FindAllEntitiesByDesignerName<CBasePropDoor>("func_door");
+        foreach (var door in doors)
+        {
+            if (door?.IsValid == true)
+            {
+                door.AcceptInput("Close");
+            }
+        }
+
+        // Tambem tentar func_door_rotating
+        var rotatingDoors = Utilities.FindAllEntitiesByDesignerName<CBasePropDoor>("func_door_rotating");
+        foreach (var door in rotatingDoors)
+        {
+            if (door?.IsValid == true)
+            {
+                door.AcceptInput("Close");
+            }
+        }
+
+        Logger.LogInformation("[SuperJailbreak] Celas fechadas");
+    }
+
     public void ShowRules(CCSPlayerController player)
     {
         player.PrintToChat($" {ChatColors.Purple}=== Regras do Jailbreak ===");

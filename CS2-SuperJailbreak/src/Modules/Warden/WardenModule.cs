@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Timers;
@@ -139,9 +140,12 @@ public class WardenModule
         _plugin.PrintToCenterAll($"{player.PlayerName} e o WARDEN!");
 
         // Som
-        if (_plugin.Config.SoundsEnabled)
+        if (_plugin.Config.SoundsEnabled && !string.IsNullOrEmpty(_plugin.Config.WardenAssignedSound))
         {
-            // TODO: Tocar som de warden
+            foreach (var p in Utilities.GetPlayers().Where(p => p?.IsValid == true))
+            {
+                p.ExecuteClientCommand($"play {_plugin.Config.WardenAssignedSound}");
+            }
         }
 
         _plugin.Logger.LogInformation($"[Warden] {player.PlayerName} se tornou Warden");
@@ -193,9 +197,12 @@ public class WardenModule
         _plugin.PrintToChatAll($"{ChatColors.Red}O Warden {player.PlayerName} MORREU!");
 
         // Som de morte do warden
-        if (_plugin.Config.SoundsEnabled)
+        if (_plugin.Config.SoundsEnabled && !string.IsNullOrEmpty(_plugin.Config.WardenDiedSound))
         {
-            // TODO: Tocar som
+            foreach (var p in Utilities.GetPlayers().Where(p => p?.IsValid == true))
+            {
+                p.ExecuteClientCommand($"play {_plugin.Config.WardenDiedSound}");
+            }
         }
 
         RemoveWarden(false);
@@ -369,8 +376,38 @@ public class WardenModule
 
     private void DrawLaser(Vector start, Vector end)
     {
-        // Criar efeito de laser usando particulas ou beams
-        // TODO: Implementar beam visual
+        // Criar beam laser usando env_beam
+        var beam = Utilities.CreateEntityByName<CEnvBeam>("env_beam");
+        if (beam == null) return;
+
+        // Configurar cor do laser
+        var colorParts = _plugin.Config.WardenLaserColor.Split(',');
+        int r = 0, g = 0, b = 255;
+        if (colorParts.Length >= 3)
+        {
+            int.TryParse(colorParts[0], out r);
+            int.TryParse(colorParts[1], out g);
+            int.TryParse(colorParts[2], out b);
+        }
+
+        beam.Render = System.Drawing.Color.FromArgb(255, r, g, b);
+        beam.Width = 1.0f;
+
+        beam.Teleport(start, new QAngle(0, 0, 0), new Vector(0, 0, 0));
+
+        // Definir endpoint
+        beam.EndPos.X = end.X;
+        beam.EndPos.Y = end.Y;
+        beam.EndPos.Z = end.Z;
+
+        beam.DispatchSpawn();
+
+        // Remover beam apos 0.1 segundos (tick)
+        _plugin.AddTimer(0.1f, () =>
+        {
+            if (beam.IsValid)
+                beam.Remove();
+        });
     }
 
     public void AddPaintMarker(Vector position, System.Drawing.Color color)
@@ -390,8 +427,24 @@ public class WardenModule
             CreatedAt = DateTime.UtcNow
         };
 
-        // Criar entidade visual
-        // TODO: Implementar marcador visual
+        // Criar entidade visual usando prop_dynamic
+        var prop = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic");
+        if (prop != null)
+        {
+            prop.SetModel("models/props/cs_office/vending_machine.vmdl"); // Modelo pequeno
+            prop.Teleport(new Vector(position.X, position.Y, position.Z - 5), new QAngle(0, 0, 0), new Vector(0, 0, 0));
+
+            // Escala pequena para parecer um marcador
+            prop.CBodyComponent!.SceneNode!.GetSkeletonInstance().Scale = 0.1f;
+
+            // Aplicar cor
+            prop.RenderMode = RenderMode_t.kRenderTransColor;
+            prop.Render = color;
+            Utilities.SetStateChanged(prop, "CBaseModelEntity", "m_clrRender");
+
+            prop.DispatchSpawn();
+            marker.Entity = prop;
+        }
 
         PaintMarkers.Add(marker);
     }
@@ -456,7 +509,7 @@ public class WardenModule
             return;
         }
 
-        // TODO: Implementar fechar celas
+        _plugin.CloseCells();
         _plugin.PrintToChatAll($"{ChatColors.Red}Celas fechadas pelo Warden!");
     }
 
@@ -759,12 +812,17 @@ public class WardenModule
         player.GiveNamedItem(primary);
         player.GiveNamedItem(secondary);
 
-        // Dar armadura
+        // Dar armadura e capacete
         var pawn = player.PlayerPawn.Value;
         if (pawn != null)
         {
             pawn.ArmorValue = 100;
-            // TODO: Dar capacete
+            var itemServices = pawn.ItemServices as CCSPlayer_ItemServices;
+            if (itemServices != null)
+            {
+                itemServices.HasHelmet = true;
+                Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_pItemServices");
+            }
         }
 
         _plugin.PrintToChat(player, $"{ChatColors.Green}Armas recebidas!");
@@ -781,8 +839,9 @@ public class WardenModule
 
     private bool IsAdmin(CCSPlayerController player)
     {
-        // TODO: Implementar verificacao de admin real
-        return false;
+        // Verificar se jogador tem permissao de admin do CounterStrikeSharp
+        return AdminManager.PlayerHasPermissions(player, "@css/generic") ||
+               AdminManager.PlayerHasPermissions(player, "@css/root");
     }
 
     private void GiveFreeday(CCSPlayerController player)

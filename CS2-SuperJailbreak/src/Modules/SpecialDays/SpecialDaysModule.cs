@@ -173,6 +173,12 @@ public class SpecialDaysModule
             case SpecialDayType.FreezeTag:
                 StartFreezeTag();
                 break;
+            case SpecialDayType.SumoWrestling:
+                StartSumoWrestling();
+                break;
+            case SpecialDayType.DeathRun:
+                StartDeathRun();
+                break;
         }
 
         _plugin.Logger.LogInformation($"[SpecialDays] Iniciado: {type} por {initiator?.PlayerName ?? "Sistema"}");
@@ -353,7 +359,11 @@ public class SpecialDaysModule
             if (pawn != null)
             {
                 pawn.MoveType = MoveType_t.MOVETYPE_NONE;
-                // TODO: Aplicar cegueira
+                // Aplicar cegueira usando FlashDuration
+                pawn.FlashMaxAlpha = 255.0f;
+                pawn.FlashDuration = 61.0f; // 60 segundos + 1 para garantir
+                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashDuration");
+                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashMaxAlpha");
             }
         }
 
@@ -370,6 +380,11 @@ public class SpecialDaysModule
                 if (pawn != null)
                 {
                     pawn.MoveType = MoveType_t.MOVETYPE_WALK;
+                    // Remover cegueira
+                    pawn.FlashDuration = 0.0f;
+                    pawn.FlashMaxAlpha = 0.0f;
+                    Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashDuration");
+                    Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashMaxAlpha");
                 }
             }
         });
@@ -819,6 +834,113 @@ public class SpecialDaysModule
         });
 
         _plugin.PrintToChatAll($"{ChatColors.LightBlue}FREEZE TAG! CTs congelam, Ts descongelam aliados!");
+    }
+
+    private void StartSumoWrestling()
+    {
+        // Abrir celas
+        _plugin.OpenCells();
+
+        // Remover todas as armas e dar apenas facas
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (player?.IsValid == true && player.PawnIsAlive)
+            {
+                player.RemoveWeapons();
+                player.GiveNamedItem("weapon_knife");
+
+                // Aplicar configuracoes de sumo
+                var pawn = player.PlayerPawn.Value;
+                if (pawn != null)
+                {
+                    // Alta vida para aguentar mais hits
+                    pawn.Health = CurrentConfig?.Health ?? 500;
+                    Utilities.SetStateChanged(pawn, "CBaseEntity", "m_iHealth");
+
+                    // Knockback aumentado (velocidade maior ao levar hit)
+                    // Aplicar cor baseada no time
+                    if (player.Team == CsTeam.Terrorist)
+                    {
+                        pawn.RenderMode = RenderMode_t.kRenderTransColor;
+                        pawn.Render = System.Drawing.Color.Orange;
+                    }
+                    else
+                    {
+                        pawn.RenderMode = RenderMode_t.kRenderTransColor;
+                        pawn.Render = System.Drawing.Color.Cyan;
+                    }
+                    Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
+                }
+            }
+        }
+
+        _plugin.PrintToChatAll($"{ChatColors.Yellow}SUMO WRESTLING! Empurre os inimigos para fora da arena!");
+        _plugin.PrintToChatAll($"{ChatColors.Yellow}Apenas facas - ultimo time de pe vence!");
+    }
+
+    private void StartDeathRun()
+    {
+        // Abrir celas
+        _plugin.OpenCells();
+
+        // Ts sao os runners - sem armas
+        foreach (var t in _plugin.GetAlivePlayers(CsTeam.Terrorist))
+        {
+            t.RemoveWeapons();
+            t.GiveNamedItem("weapon_knife");
+
+            var pawn = t.PlayerPawn.Value;
+            if (pawn != null)
+            {
+                // Runners tem mais velocidade
+                pawn.VelocityModifier = 1.2f;
+                Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_flVelocityModifier");
+
+                // Glow verde para runners
+                pawn.RenderMode = RenderMode_t.kRenderTransColor;
+                pawn.Render = System.Drawing.Color.LightGreen;
+                Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
+            }
+        }
+
+        // CTs sao os trappers - podem ativar armadilhas
+        foreach (var ct in _plugin.GetAlivePlayers(CsTeam.CounterTerrorist))
+        {
+            ct.RemoveWeapons();
+            // CTs nao tem armas, apenas ativam armadilhas do mapa
+
+            var pawn = ct.PlayerPawn.Value;
+            if (pawn != null)
+            {
+                // Trappers ficam parados
+                pawn.MoveType = MoveType_t.MOVETYPE_NONE;
+
+                // Glow vermelho para trappers
+                pawn.RenderMode = RenderMode_t.kRenderTransColor;
+                pawn.Render = System.Drawing.Color.Red;
+                Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
+            }
+        }
+
+        // Timer para liberar CTs depois de um tempo (opcional)
+        _plugin.AddTimer(60.0f, () =>
+        {
+            if (CurrentSpecialDay != SpecialDayType.DeathRun) return;
+
+            _plugin.PrintToChatAll($"{ChatColors.Red}CTs liberados para cacar!");
+            foreach (var ct in _plugin.GetAlivePlayers(CsTeam.CounterTerrorist))
+            {
+                var pawn = ct.PlayerPawn.Value;
+                if (pawn != null)
+                {
+                    pawn.MoveType = MoveType_t.MOVETYPE_WALK;
+                }
+                ct.GiveNamedItem("weapon_knife");
+            }
+        });
+
+        _plugin.PrintToChatAll($"{ChatColors.Green}DEATH RUN! Terroristas devem completar o percurso!");
+        _plugin.PrintToChatAll($"{ChatColors.Red}CTs controlam as armadilhas. Sobreviva ate o fim!");
     }
 
     #endregion
