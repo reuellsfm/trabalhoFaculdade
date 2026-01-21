@@ -420,24 +420,18 @@ public class SpecialDaysModule
         var pawn = player.PlayerPawn.Value;
         if (pawn == null) return;
 
-        // Criar flashbang na posicao do jogador para cega-lo
-        var flash = Utilities.CreateEntityByName<CFlashbangProjectile>("flashbang_projectile");
-        if (flash != null)
-        {
-            var pos = pawn.AbsOrigin;
-            if (pos != null)
-            {
-                flash.Teleport(new Vector(pos.X, pos.Y, pos.Z + 64), new QAngle(0, 0, 0), new Vector(0, 0, 0));
-                flash.DispatchSpawn();
-                flash.AcceptInput("InitializeSpawnFromWorld");
-                // Detonar imediatamente
-                _plugin.AddTimer(0.1f, () =>
-                {
-                    if (flash.IsValid)
-                        flash.AcceptInput("Detonate");
-                });
-            }
-        }
+        // Usar propriedades de flash diretamente (conforme documentacao CounterStrikeSharp)
+        // https://docs.cssharp.dev/api/CounterStrikeSharp.API.Core.CCSPlayerPawn.html
+        pawn.FlashMaxAlpha = 255.0f;  // Cegueira total (0-255)
+        pawn.FlashDuration = 3.0f;    // Duracao do efeito
+        pawn.BlindStartTime = Server.CurrentTime;
+        pawn.BlindUntilTime = Server.CurrentTime + 3.0f;
+
+        // Sincronizar com cliente
+        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashMaxAlpha");
+        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashDuration");
+        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindStartTime");
+        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindUntilTime");
     }
 
     private void StartZombie()
