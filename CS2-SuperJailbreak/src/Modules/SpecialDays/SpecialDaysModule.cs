@@ -358,16 +358,20 @@ public class SpecialDaysModule
             var pawn = ct.PlayerPawn.Value;
             if (pawn != null)
             {
+                // Congelar CT
                 pawn.MoveType = MoveType_t.MOVETYPE_NONE;
-                // Aplicar cegueira usando FlashDuration
-                pawn.FlashMaxAlpha = 255.0f;
-                pawn.FlashDuration = 61.0f; // 60 segundos + 1 para garantir
-                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashDuration");
-                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashMaxAlpha");
+                Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+
+                // Cegar usando BlindUntilTime (metodo que funciona no CS2)
+                pawn.BlindUntilTime = Server.CurrentTime + 61.0f;
+                pawn.BlindStartTime = Server.CurrentTime;
+                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindUntilTime");
+                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindStartTime");
             }
         }
 
         _plugin.PrintToChatAll($"{ChatColors.Green}Terroristas tem 60 segundos para se esconder!");
+        _plugin.PrintToChatAll($"{ChatColors.Yellow}CTs estao CONGELADOS e CEGOS!");
 
         // Timer para liberar CTs
         _freezeTimer = _plugin.AddTimer(60.0f, () =>
@@ -379,12 +383,13 @@ public class SpecialDaysModule
                 var pawn = ct.PlayerPawn.Value;
                 if (pawn != null)
                 {
+                    // Descongelar
                     pawn.MoveType = MoveType_t.MOVETYPE_WALK;
+                    Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+
                     // Remover cegueira
-                    pawn.FlashDuration = 0.0f;
-                    pawn.FlashMaxAlpha = 0.0f;
-                    Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashDuration");
-                    Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashMaxAlpha");
+                    pawn.BlindUntilTime = 0.0f;
+                    Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindUntilTime");
                 }
             }
         });

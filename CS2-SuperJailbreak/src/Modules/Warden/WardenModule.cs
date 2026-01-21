@@ -376,8 +376,8 @@ public class WardenModule
 
     private void DrawLaser(Vector start, Vector end)
     {
-        // Criar beam laser usando env_beam
-        var beam = Utilities.CreateEntityByName<CEnvBeam>("env_beam");
+        // Usar CBeam diretamente (funciona no CS2)
+        var beam = Utilities.CreateEntityByName<CBeam>("beam");
         if (beam == null) return;
 
         // Configurar cor do laser
@@ -390,19 +390,21 @@ public class WardenModule
             int.TryParse(colorParts[2], out b);
         }
 
+        // Configurar beam
+        beam.SetModel("materials/sprites/laserbeam.vmat");
         beam.Render = System.Drawing.Color.FromArgb(255, r, g, b);
-        beam.Width = 1.0f;
+        beam.Width = 2.0f;
 
+        // Posicionar inicio e fim
         beam.Teleport(start, new QAngle(0, 0, 0), new Vector(0, 0, 0));
-
-        // Definir endpoint
         beam.EndPos.X = end.X;
         beam.EndPos.Y = end.Y;
         beam.EndPos.Z = end.Z;
 
         beam.DispatchSpawn();
+        beam.AcceptInput("TurnOn");
 
-        // Remover beam apos 0.1 segundos (tick)
+        // Remover beam apos 0.1 segundos
         _plugin.AddTimer(0.1f, () =>
         {
             if (beam.IsValid)
