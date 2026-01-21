@@ -60,7 +60,7 @@ public partial class SuperJailbreakPlugin : BasePlugin, IPluginConfig<PluginConf
     public bool IsWarmup { get; private set; }
     public bool IsFreezetime { get; private set; }
     public int RoundNumber { get; private set; }
-    public int SpecialDaysUsedThisMap { get; private set; }
+    public int SpecialDaysUsedThisMap { get; set; }
 
     // Timers
     private CounterStrikeSharp.API.Modules.Timers.Timer? _laserTimer;

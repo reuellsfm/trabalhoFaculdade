@@ -818,7 +818,7 @@ public class SpecialDaysModule
             EndSpecialDay();
         });
 
-        _plugin.PrintToChatAll($"{ChatColors.Cyan}FREEZE TAG! CTs congelam, Ts descongelam aliados!");
+        _plugin.PrintToChatAll($"{ChatColors.LightBlue}FREEZE TAG! CTs congelam, Ts descongelam aliados!");
     }
 
     #endregion
