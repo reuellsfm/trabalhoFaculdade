@@ -417,21 +417,17 @@ public class SpecialDaysModule
 
     private void ApplyBlindness(CCSPlayerController player)
     {
-        var pawn = player.PlayerPawn.Value;
-        if (pawn == null) return;
+        // Usar UserMessage Fade para cegar (metodo que funciona no CS2)
+        // Baseado no CS2-AdminPlus: https://github.com/debr1sj/CS2-AdminPlus
+        var fadeMsg = UserMessage.FromPartialName("Fade");
+        if (fadeMsg == null) return;
 
-        // Usar propriedades de flash diretamente (conforme documentacao CounterStrikeSharp)
-        // https://docs.cssharp.dev/api/CounterStrikeSharp.API.Core.CCSPlayerPawn.html
-        pawn.FlashMaxAlpha = 255.0f;  // Cegueira total (0-255)
-        pawn.FlashDuration = 3.0f;    // Duracao do efeito
-        pawn.BlindStartTime = Server.CurrentTime;
-        pawn.BlindUntilTime = Server.CurrentTime + 3.0f;
+        fadeMsg.SetInt("duration", 512);      // Duracao do fade (512 = 1 segundo)
+        fadeMsg.SetInt("hold_time", 1536);    // Tempo de hold (1536 = 3 segundos)
+        fadeMsg.SetInt("flags", 0x0001);      // FFADE_IN = 0x0001
+        fadeMsg.SetInt("color", unchecked((int)0xFFFFFFFF)); // Branco ARGB
 
-        // Sincronizar com cliente
-        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashMaxAlpha");
-        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flFlashDuration");
-        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindStartTime");
-        Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindUntilTime");
+        fadeMsg.Send(player);
     }
 
     private void StartZombie()
