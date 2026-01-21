@@ -52,6 +52,10 @@ public class SpecialDaysModule
     // One in the Chamber
     private Dictionary<int, int> _chamberAmmo = new();
 
+    // Hide and Seek blindness
+    private HashSet<int> _blindedPlayers = new();
+    private CounterStrikeSharp.API.Modules.Timers.Timer? _blindTimer;
+
     public SpecialDaysModule(SuperJailbreakPlugin plugin)
     {
         _plugin = plugin;
@@ -352,6 +356,9 @@ public class SpecialDaysModule
         // Abrir celas
         _plugin.OpenCells();
 
+        // Lista de CTs para manter cegos
+        _blindedPlayers.Clear();
+
         // Congelar e cegar CTs
         foreach (var ct in _plugin.GetAlivePlayers(CsTeam.CounterTerrorist))
         {
@@ -362,13 +369,25 @@ public class SpecialDaysModule
                 pawn.MoveType = MoveType_t.MOVETYPE_NONE;
                 Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
 
-                // Cegar usando BlindUntilTime (metodo que funciona no CS2)
-                pawn.BlindUntilTime = Server.CurrentTime + 61.0f;
-                pawn.BlindStartTime = Server.CurrentTime;
-                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindUntilTime");
-                Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindStartTime");
+                // Adicionar a lista de cegos
+                _blindedPlayers.Add(ct.Slot);
+
+                // Aplicar flash inicial
+                ApplyBlindness(ct);
             }
         }
+
+        // Timer para reaplicar cegueira a cada 2 segundos (flash dura ~3s)
+        _blindTimer = _plugin.AddTimer(2.0f, () =>
+        {
+            foreach (var ct in _plugin.GetAlivePlayers(CsTeam.CounterTerrorist))
+            {
+                if (_blindedPlayers.Contains(ct.Slot))
+                {
+                    ApplyBlindness(ct);
+                }
+            }
+        }, TimerFlags.REPEAT);
 
         _plugin.PrintToChatAll($"{ChatColors.Green}Terroristas tem 60 segundos para se esconder!");
         _plugin.PrintToChatAll($"{ChatColors.Yellow}CTs estao CONGELADOS e CEGOS!");
@@ -378,6 +397,11 @@ public class SpecialDaysModule
         {
             _plugin.PrintToChatAll($"{ChatColors.Red}CTs liberados! CACADA COMECOU!");
 
+            // Parar timer de cegueira
+            _blindTimer?.Kill();
+            _blindTimer = null;
+            _blindedPlayers.Clear();
+
             foreach (var ct in _plugin.GetAlivePlayers(CsTeam.CounterTerrorist))
             {
                 var pawn = ct.PlayerPawn.Value;
@@ -386,13 +410,34 @@ public class SpecialDaysModule
                     // Descongelar
                     pawn.MoveType = MoveType_t.MOVETYPE_WALK;
                     Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
-
-                    // Remover cegueira
-                    pawn.BlindUntilTime = 0.0f;
-                    Utilities.SetStateChanged(pawn, "CCSPlayerPawnBase", "m_flBlindUntilTime");
                 }
             }
         });
+    }
+
+    private void ApplyBlindness(CCSPlayerController player)
+    {
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null) return;
+
+        // Criar flashbang na posicao do jogador para cega-lo
+        var flash = Utilities.CreateEntityByName<CFlashbangProjectile>("flashbang_projectile");
+        if (flash != null)
+        {
+            var pos = pawn.AbsOrigin;
+            if (pos != null)
+            {
+                flash.Teleport(new Vector(pos.X, pos.Y, pos.Z + 64), new QAngle(0, 0, 0), new Vector(0, 0, 0));
+                flash.DispatchSpawn();
+                flash.AcceptInput("InitializeSpawnFromWorld");
+                // Detonar imediatamente
+                _plugin.AddTimer(0.1f, () =>
+                {
+                    if (flash.IsValid)
+                        flash.AcceptInput("Detonate");
+                });
+            }
+        }
     }
 
     private void StartZombie()
