@@ -8,6 +8,7 @@
     <Version>1.0.0</Version>
     <Authors>SuperJailbreak Team</Authors>
     <Description>Plugin revolucionario de Jailbreak para CS2 com CounterStrikeSharp</Description>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
