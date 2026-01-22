@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Timers;
+using CounterStrikeSharp.API.Modules.UserMessages;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
 using SuperJailbreak.Core;
@@ -365,37 +366,55 @@ public class SpecialDaysModule
             var pawn = ct.PlayerPawn.Value;
             if (pawn != null)
             {
-                // Congelar CT
+                // Congelar CT usando MoveType
                 pawn.MoveType = MoveType_t.MOVETYPE_NONE;
                 Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+
+                // Zerar velocidade para garantir congelamento
+                pawn.VelocityModifier = 0.0f;
+                Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_flVelocityModifier");
 
                 // Adicionar a lista de cegos
                 _blindedPlayers.Add(ct.Slot);
 
-                // Aplicar flash inicial
+                // Aplicar cegueira inicial (tela preta)
                 ApplyBlindness(ct);
             }
         }
 
-        // Timer para reaplicar cegueira a cada 2 segundos (flash dura ~3s)
-        _blindTimer = _plugin.AddTimer(2.0f, () =>
+        // Timer para reaplicar cegueira a cada 30 segundos (com STAYOUT dura mais)
+        // e garantir que continuam congelados
+        _blindTimer = _plugin.AddTimer(30.0f, () =>
         {
             foreach (var ct in _plugin.GetAlivePlayers(CsTeam.CounterTerrorist))
             {
                 if (_blindedPlayers.Contains(ct.Slot))
                 {
+                    // Reaplicar cegueira
                     ApplyBlindness(ct);
+
+                    // Garantir congelamento
+                    var pawn = ct.PlayerPawn.Value;
+                    if (pawn != null)
+                    {
+                        pawn.MoveType = MoveType_t.MOVETYPE_NONE;
+                        Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+                        pawn.VelocityModifier = 0.0f;
+                        Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_flVelocityModifier");
+                    }
                 }
             }
         }, TimerFlags.REPEAT);
 
         _plugin.PrintToChatAll($"{ChatColors.Green}Terroristas tem 60 segundos para se esconder!");
         _plugin.PrintToChatAll($"{ChatColors.Yellow}CTs estao CONGELADOS e CEGOS!");
+        _plugin.PrintToCenterAll("HIDE AND SEEK - Ts se escondam!");
 
         // Timer para liberar CTs
         _freezeTimer = _plugin.AddTimer(60.0f, () =>
         {
             _plugin.PrintToChatAll($"{ChatColors.Red}CTs liberados! CACADA COMECOU!");
+            _plugin.PrintToCenterAll("CACADA COMECOU!");
 
             // Parar timer de cegueira
             _blindTimer?.Kill();
@@ -407,27 +426,109 @@ public class SpecialDaysModule
                 var pawn = ct.PlayerPawn.Value;
                 if (pawn != null)
                 {
-                    // Descongelar
+                    // Descongelar - definir MoveType para WALK
                     pawn.MoveType = MoveType_t.MOVETYPE_WALK;
                     Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+
+                    // Garantir que a velocidade esta normal
+                    pawn.VelocityModifier = 1.0f;
+                    Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_flVelocityModifier");
                 }
+
+                // Remover cegueira
+                RemoveBlindness(ct);
             }
         });
     }
 
     private void ApplyBlindness(CCSPlayerController player)
     {
-        // Usar UserMessage Fade para cegar (metodo que funciona no CS2)
-        // Baseado no CS2-AdminPlus: https://github.com/debr1sj/CS2-AdminPlus
-        var fadeMsg = UserMessage.FromPartialName("Fade");
-        if (fadeMsg == null) return;
+        // Usar UserMessage Fade para cegar com tela PRETA
+        // Documentacao: https://wiki.alliedmods.net/Counter-Strike:_Global_Offensive_UserMessages
+        // Flags: FFADE_OUT (0x0002) + FFADE_STAYOUT (0x0008) + FFADE_PURGE (0x0010) = 0x001A
+        // Valores em Q7.9 fixed-point: 512 = 1 segundo
 
-        fadeMsg.SetInt("duration", 512);      // Duracao do fade (512 = 1 segundo)
-        fadeMsg.SetInt("hold_time", 1536);    // Tempo de hold (1536 = 3 segundos)
-        fadeMsg.SetInt("flags", 0x0001);      // FFADE_IN = 0x0001
-        fadeMsg.SetInt("color", unchecked((int)0xFFFFFFFF)); // Branco ARGB
+        try
+        {
+            var fadeMsg = UserMessage.FromPartialName("Fade");
+            if (fadeMsg == null)
+            {
+                _plugin.Logger.LogWarning("[HNS] Fade UserMessage nao encontrado");
+                return;
+            }
 
-        fadeMsg.Send(player);
+            // Q7.9 fixed-point format: multiply seconds by 512
+            fadeMsg.SetInt("duration", 256);       // 0.5 segundo para fade
+            fadeMsg.SetInt("hold_time", 32000);    // ~62 segundos hold (maximo pratico)
+            fadeMsg.SetInt("flags", 0x001A);       // FFADE_OUT | FFADE_STAYOUT | FFADE_PURGE
+
+            // Cor PRETA (RGBA) - acessar subcampos do CMsgRGBA
+            // Tentar diferentes formatos de acesso ao campo de cor
+            try
+            {
+                fadeMsg.SetInt("clr.r", 0);     // Red = 0
+                fadeMsg.SetInt("clr.g", 0);     // Green = 0
+                fadeMsg.SetInt("clr.b", 0);     // Blue = 0
+                fadeMsg.SetInt("clr.a", 255);   // Alpha = 255 (opaco)
+            }
+            catch
+            {
+                // Fallback: tentar formato alternativo
+                try
+                {
+                    // Alguns protobuf usam underscore
+                    fadeMsg.SetInt("clr_r", 0);
+                    fadeMsg.SetInt("clr_g", 0);
+                    fadeMsg.SetInt("clr_b", 0);
+                    fadeMsg.SetInt("clr_a", 255);
+                }
+                catch
+                {
+                    // Ultimo fallback: packed color (ARGB)
+                    fadeMsg.SetInt("color", unchecked((int)0xFF000000));
+                }
+            }
+
+            fadeMsg.Recipients.Add(player);
+            fadeMsg.Send();
+        }
+        catch (Exception ex)
+        {
+            _plugin.Logger.LogError($"[HNS] Erro ao aplicar cegueira: {ex.Message}");
+        }
+    }
+
+    private void RemoveBlindness(CCSPlayerController player)
+    {
+        // Remover fade enviando um fade transparente
+        try
+        {
+            var fadeMsg = UserMessage.FromPartialName("Fade");
+            if (fadeMsg == null) return;
+
+            fadeMsg.SetInt("duration", 256);
+            fadeMsg.SetInt("hold_time", 0);
+            fadeMsg.SetInt("flags", 0x0012);  // FFADE_OUT | FFADE_PURGE
+
+            try
+            {
+                fadeMsg.SetInt("clr.r", 0);
+                fadeMsg.SetInt("clr.g", 0);
+                fadeMsg.SetInt("clr.b", 0);
+                fadeMsg.SetInt("clr.a", 0);  // Alpha = 0 (transparente)
+            }
+            catch
+            {
+                fadeMsg.SetInt("color", 0);
+            }
+
+            fadeMsg.Recipients.Add(player);
+            fadeMsg.Send();
+        }
+        catch (Exception ex)
+        {
+            _plugin.Logger.LogError($"[HNS] Erro ao remover cegueira: {ex.Message}");
+        }
     }
 
     private void StartZombie()

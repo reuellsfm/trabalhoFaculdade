@@ -93,11 +93,16 @@ public class EconomyModule
     public void OnRoundStart()
     {
         _purchasesThisRound.Clear();
+        _playersWithNoFallDamage.Clear();
+        _playersWithDoubleJump.Clear();
+        _playersJumpCount.Clear();
+        _playersWithTrail.Clear();
     }
 
     public void OnMapStart()
     {
         _purchasesThisMap.Clear();
+        OnRoundStart();
     }
 
     #endregion
@@ -621,27 +626,6 @@ public class EconomyModule
             if (particle.IsValid)
                 particle.Remove();
         });
-    }
-
-    /// <summary>
-    /// Limpa efeitos no inicio da rodada
-    /// </summary>
-    public void OnRoundStart()
-    {
-        _purchasesThisRound.Clear();
-        _playersWithNoFallDamage.Clear();
-        _playersWithDoubleJump.Clear();
-        _playersJumpCount.Clear();
-        _playersWithTrail.Clear();
-    }
-
-    /// <summary>
-    /// Limpa efeitos no inicio do mapa
-    /// </summary>
-    public void OnMapStart()
-    {
-        _purchasesThisMap.Clear();
-        OnRoundStart();
     }
 
     #endregion
